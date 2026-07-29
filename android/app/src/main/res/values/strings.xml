@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GT3 Circuit</string>
+    <string name="title_activity_main">GT3 Circuit</string>
+    <string name="package_name">com.gt3circuit.app</string>
+    <string name="custom_url_scheme">com.gt3circuit.app</string>
+</resources>

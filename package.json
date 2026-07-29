@@ -1,0 +1,23 @@
+{
+  "name": "gt3-circuit",
+  "version": "1.0.0",
+  "description": "Mobile-first 3D GT3 sim racing game built with Three.js — tilt-steering, fuel & tire wear, qualifying + race sessions.",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "serve": "npx serve .",
+    "build:www": "node scripts/build-www.js",
+    "cap:sync": "npm run build:www && npx cap sync android"
+  },
+  "keywords": ["racing", "game", "threejs", "webgl", "gt3", "simracing"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2"
+  }
+}

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>GT3 CIRCUIT — Sim Racing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- Real Racing–inspired carbon/motorsport palette ---- */
+    --carbon:#0a0c10;
+    --carbon-2:#12151b;
+    --panel:rgba(16,19,25,0.86);
+    --panel-solid:#14171e;
+    --steel:#2a2f38;
+    --hairline:rgba(255,255,255,0.08);
+    --red:#ff1e2d;
+    --red-dark:#a30f1c;
+    --gold:#c9a24b;
+    --gold-soft:#e8c876;
+    --cyan:#2fd9ff;
+    --green:#3ddc84;
+    --text:#eef1f5;
+    --dim:#7c8695;
+    --dim-2:#4d5561;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0;padding:0;width:100%;height:100%;background:var(--carbon);overflow:hidden;
+    font-family:'Rajdhani','Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);
+    overscroll-behavior:none; touch-action:none;}
+  #canvas-wrap{position:fixed;inset:0;}
+  canvas{display:block;width:100%;height:100%;}
+
+  /* Carbon fiber weave texture, used as a background layer on menu screens */
+  .carbon-tex{
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 8px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 2px, transparent 2px, transparent 8px);
+  }
+
+  /* ---------- Rotate-device gate ---------- */
+  #rotateGate{position:fixed;inset:0;z-index:100;display:none;background:var(--carbon);
+    align-items:center;justify-content:center;flex-direction:column;gap:18px;text-align:center;padding:20px;}
+  #rotateGate.active{display:flex;}
+  .rotateIcon{font-size:52px;animation:tilt 1.6s ease-in-out infinite;}
+  @keyframes tilt{0%,100%{transform:rotate(0deg);}50%{transform:rotate(90deg);}}
+  #rotateGate .rg-title{font-family:'Oswald',sans-serif;font-weight:700;font-size:20px;letter-spacing:3px;text-transform:uppercase;color:var(--text);}
+  #rotateGate .rg-sub{font-size:13px;color:var(--dim);max-width:280px;line-height:1.6;}
+
+  /* ---------- Screens ---------- */
+  .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    z-index:20; background:
+      linear-gradient(120deg, rgba(255,30,45,0.06) 0%, transparent 40%),
+      radial-gradient(ellipse at 15% 50%, #171b23 0%, var(--carbon) 65%);}
+  .screen.carbon-tex{background-blend-mode:overlay;}
+  .hidden{display:none !important;}
+
+  .brand-row{position:absolute; top:5%; left:6%; display:flex; align-items:baseline; gap:10px;}
+  .logo{font-family:'Oswald',sans-serif; font-size:clamp(30px,4.6vw,52px); font-weight:700; letter-spacing:1px;
+    color:var(--text); line-height:1; text-transform:uppercase;}
+  .logo .hl{color:var(--red);}
+  .logo-sub{font-size:11px;font-weight:600;letter-spacing:5px;color:var(--dim);text-transform:uppercase;border-left:2px solid var(--gold);padding-left:10px;}
+
+  .menu-shell{position:relative; display:flex; align-items:center; justify-content:flex-end; width:100%; height:100%; padding:0 6% 0 0;}
+
+  .panel{background:var(--panel); border:1px solid var(--hairline); border-left:3px solid var(--red);
+    padding:24px 26px; backdrop-filter:blur(20px); width:min(46vw,460px); max-height:80vh; overflow-y:auto;
+    box-shadow:0 24px 70px rgba(0,0,0,0.6); clip-path:polygon(0 0,100% 0,100% 100%,14px 100%,0 calc(100% - 14px));}
+
+  .btn{appearance:none;border:none;padding:14px 20px;font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
+    background:linear-gradient(120deg,var(--red),var(--red-dark)); color:#fff; cursor:pointer; width:100%;
+    box-shadow:0 8px 22px rgba(255,30,45,0.28); letter-spacing:2px; text-transform:uppercase; transition:transform .1s;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);}
+  .btn:active{transform:scale(0.97);}
+  .btn.secondary{background:linear-gradient(120deg,var(--steel),#1a1e25); box-shadow:0 8px 20px rgba(0,0,0,0.35);}
+  .btn.ghost{background:transparent;border:1px solid var(--hairline);box-shadow:none; clip-path:none;}
+  .btn.gold{background:linear-gradient(120deg,var(--gold-soft),var(--gold)); color:#231a05; box-shadow:0 8px 22px rgba(201,162,75,0.3);}
+
+  .section-title{font-family:'Oswald',sans-serif; font-size:12px;font-weight:600;letter-spacing:3px;color:var(--gold);margin:0 0 14px;text-transform:uppercase;
+    display:flex; align-items:center; gap:10px;}
+  .section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--hairline),transparent);}
+
+  /* car select */
+  .car-list{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow-y:auto;padding-right:4px;}
+  .car-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--hairline);
+    background:rgba(255,255,255,0.02); cursor:pointer; border-left:2px solid transparent;}
+  .car-item.selected{border-left-color:var(--red); background:rgba(255,30,45,0.08);}
+  .car-swatch{width:36px;height:36px;flex-shrink:0;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.15);
+    clip-path:polygon(20% 0,100% 0,80% 100%,0 100%);}
+  .car-info{flex:1;min-width:0;}
+  .car-name{font-family:'Oswald',sans-serif; font-weight:600;font-size:14px;letter-spacing:0.5px;}
+  .car-stats{font-size:12px;color:var(--dim);display:flex;gap:12px;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .car-stats b{color:var(--cyan);font-weight:600;}
+
+  /* ---------- HUD (landscape) ---------- */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:10;display:none;
+    font-family:'Oswald',sans-serif;}
+  #hud.active{display:block;}
+
+  .hud-top-left{position:absolute;top:calc(10px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));display:flex;align-items:center;gap:10px;}
+  .hud-top-right{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));display:flex;align-items:center;gap:10px;}
+  .hud-chip{background:var(--panel);border:1px solid var(--hairline);border-top:2px solid var(--red);padding:5px 14px;
+    font-size:11px;font-weight:600;backdrop-filter:blur(10px); letter-spacing:1.5px; text-transform:uppercase; color:var(--dim);}
+  .hud-chip .val{font-size:16px;color:var(--cyan);font-weight:700; letter-spacing:0.5px; display:block; margin-top:1px;}
+  .lap-counter{background:var(--panel); border:1px solid var(--hairline); border-top:2px solid var(--gold);
+    padding:5px 16px; font-size:24px;font-weight:700; font-variant-numeric:tabular-nums;}
+  .lap-counter .of{font-size:14px;color:var(--dim);font-weight:600;}
+
+  #posBadge{position:absolute;top:calc(10px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    background:linear-gradient(120deg,var(--red),var(--red-dark));padding:6px 20px;
+    font-weight:700;font-size:16px;letter-spacing:1px; box-shadow:0 6px 18px rgba(255,30,45,0.35);
+    clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);}
+
+  #speedo{position:absolute;bottom:calc(16px + env(safe-area-inset-bottom));right:calc(20px + env(safe-area-inset-right));text-align:right;}
+  #speedVal{font-size:clamp(46px,7vw,64px); font-weight:700;line-height:0.9;text-shadow:0 2px 14px rgba(0,0,0,0.7); font-variant-numeric:tabular-nums;}
+  #speedUnit{font-size:11px;color:var(--dim);font-weight:600; letter-spacing:2px;}
+  #gearVal{font-size:30px;font-weight:700;color:var(--gold-soft);margin-top:2px; letter-spacing:1px;}
+
+  .bars{position:absolute;bottom:calc(16px + env(safe-area-inset-bottom));left:calc(20px + env(safe-area-inset-left));display:flex;flex-direction:column;gap:9px;width:170px;}
+  .bar-row{display:flex;flex-direction:column;gap:3px;}
+  .bar-label{font-size:10px;font-weight:600;color:var(--dim);letter-spacing:2px;display:flex;justify-content:space-between; text-transform:uppercase;}
+  .bar-track{width:100%;height:6px;background:rgba(255,255,255,0.08);overflow:hidden;
+    clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);}
+  .bar-fill{height:100%;transition:width .2s;}
+  .fuel-fill{background:linear-gradient(90deg,var(--gold),var(--gold-soft));}
+  .tire-fill{background:linear-gradient(90deg,var(--green),#8be08f);}
+  .tire-fill.warn{background:linear-gradient(90deg,#f59e0b,var(--red));}
+
+  #calibrateOverlay{position:fixed;inset:0;z-index:30;background:rgba(4,5,7,0.9);display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:20px;text-align:center;padding:20px;}
+  #calibrateOverlay.active{display:flex;}
+
+  .wheelPreview{width:100px;height:100px;border-radius:50%;border:5px solid var(--cyan);position:relative;transition:transform .05s linear;
+    box-shadow:0 0 24px rgba(47,217,255,0.25);}
+  .wheelPreview::before{content:'';position:absolute;top:6px;left:50%;width:4px;height:22px;background:var(--cyan);transform:translateX(-50%);border-radius:2px;}
+
+  #touchControls{position:fixed;inset:0;z-index:11;pointer-events:none;}
+  .pedal{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom));width:84px;height:84px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;pointer-events:auto;
+    backdrop-filter:blur(10px); border:2px solid rgba(255,255,255,0.15); letter-spacing:1.5px;
+    font-family:'Oswald',sans-serif; text-transform:uppercase;}
+  #throttleBtn{right:calc(24px + env(safe-area-inset-right)); background:rgba(61,220,132,0.22); color:#8ef0ab;}
+  #brakeBtn{right:calc(118px + env(safe-area-inset-right)); background:rgba(255,30,45,0.22); color:#ff9aa2;}
+  #throttleBtn.pressed{background:rgba(61,220,132,0.55);}
+  #brakeBtn.pressed{background:rgba(255,30,45,0.55);}
+
+  .camBtn,.pauseBtn{position:absolute;top:calc(66px + env(safe-area-inset-top));width:42px;height:42px;
+    background:var(--panel);border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;font-size:17px; clip-path:polygon(15% 0,100% 0,85% 100%,0 100%);}
+  .camBtn{right:calc(14px + env(safe-area-inset-right));}
+  .pauseBtn{left:calc(14px + env(safe-area-inset-left));}
+
+  #lightsOverlay{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
+    background:rgba(4,5,7,0.7);flex-direction:column;gap:18px;}
+  #lightsOverlay.active{display:flex;}
+  .lightRow{display:flex;gap:16px;}
+  .lightDot{width:34px;height:34px;border-radius:50%;background:#2a0a0d;box-shadow:inset 0 0 0 3px rgba(255,255,255,0.1);}
+  .lightDot.on{background:var(--red);box-shadow:0 0 22px var(--red), inset 0 0 0 3px rgba(255,255,255,0.25);}
+  #lightsText{font-family:'Oswald',sans-serif; font-size:24px;font-weight:700;color:var(--dim); letter-spacing:3px; text-transform:uppercase;}
+
+  #resultOverlay{position:fixed;inset:0;z-index:26;display:none;align-items:center;justify-content:center;background:rgba(4,5,7,0.82);}
+  #resultOverlay.active{display:flex;}
+  .result-table{width:100%;border-collapse:collapse;margin:14px 0;}
+  .result-table td{padding:8px 6px;font-size:14px;border-bottom:1px solid var(--hairline); font-variant-numeric:tabular-nums;}
+  .result-table .you{color:var(--cyan);font-weight:700;}
+
+  #toast{position:fixed;top:calc(66px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    background:var(--panel);border:1px solid var(--hairline); border-top:2px solid var(--red); padding:8px 20px;
+    font-weight:600;font-size:13px;z-index:15;opacity:0;transition:opacity .3s;pointer-events:none;
+    font-family:'Oswald',sans-serif; letter-spacing:1px; text-transform:uppercase;}
+  #toast.show{opacity:1;}
+
+  #permBtn{margin-top:10px;}
+  #loadingScreen{position:fixed;inset:0;background:var(--carbon);z-index:40;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+  .spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,0.12);border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="logo">GT3<span class="hl">·</span>CIRCUIT</div>
+  <div class="spinner"></div>
+  <div style="color:var(--dim);font-size:12px;letter-spacing:2px;text-transform:uppercase;" id="loadingText">엔진 로딩 중</div>
+</div>
+
+<!-- ROTATE DEVICE GATE (portrait warning) -->
+<div id="rotateGate">
+  <div class="rotateIcon">📱</div>
+  <div class="rg-title">기기를 가로로 돌려주세요</div>
+  <div class="rg-sub">GT3 CIRCUIT은 가로 모드 전용 레이싱 게임입니다.<br>폰을 옆으로 돌리면 자동으로 시작됩니다.</div>
+</div>
+
+<div id="canvas-wrap"></div>
+
+<!-- MAIN MENU -->
+<div id="mainMenu" class="screen carbon-tex hidden">
+  <div class="brand-row">
+    <div class="logo">GT3<span class="hl">·</span>CIRCUIT</div>
+    <div class="logo-sub">SIM RACING</div>
+  </div>
+  <div class="menu-shell">
+    <div class="panel">
+      <div class="section-title">Main Menu</div>
+      <button class="btn" id="toCarSelectBtn">레이스 시작</button>
+      <button class="btn ghost" style="margin-top:10px;" id="howToBtn">조작 방법</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOW TO -->
+<div id="howToScreen" class="screen carbon-tex hidden">
+  <div class="brand-row">
+    <div class="logo">GT3<span class="hl">·</span>CIRCUIT</div>
+  </div>
+  <div class="menu-shell">
+    <div class="panel">
+      <div class="section-title">조작 방법</div>
+      <div style="font-size:14px;line-height:1.85;color:var(--dim);">
+        📱 <b style="color:var(--text)">폰을 좌우로 기울여</b> 스티어링<br>
+        🟢 오른쪽 버튼: 가속<br>
+        🔴 왼쪽 버튼: 브레이크<br>
+        📷 우측 상단 버튼: 카메라 전환 (1인칭/3인칭)<br>
+        🛞 타이어는 마모되며 그립이 감소합니다<br>
+        ⛽ 연료가 많을수록 차가 무거워집니다<br>
+        🏁 퀄리파잉 1랩 → 레이스 5랩 순서로 진행됩니다
+      </div>
+      <button class="btn secondary" style="margin-top:20px;" id="backFromHowTo">뒤로</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAR SELECT -->
+<div id="carSelectScreen" class="screen carbon-tex hidden">
+  <div class="brand-row">
+    <div class="logo">GT3<span class="hl">·</span>CIRCUIT</div>
+  </div>
+  <div class="menu-shell">
+    <div class="panel">
+      <div class="section-title">GT3 차량 선택</div>
+      <div class="car-list" id="carList"></div>
+      <button class="btn" style="margin-top:16px;" id="toCalibrateBtn">다음</button>
+      <button class="btn ghost" style="margin-top:8px;" id="backFromCarSelect">뒤로</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALIBRATION -->
+<div id="calibrateScreen" class="screen carbon-tex hidden">
+  <div class="brand-row">
+    <div class="logo">GT3<span class="hl">·</span>CIRCUIT</div>
+  </div>
+  <div class="menu-shell">
+    <div class="panel" style="text-align:center;">
+      <div class="section-title">기울기 센서 보정</div>
+      <div style="font-size:13px;color:var(--dim);margin-bottom:16px;">
+        폰을 편하게 잡은 자세로 정면을 향하게 한 뒤<br>버튼을 눌러 중심을 맞추세요.
+      </div>
+      <div class="wheelPreview" id="wheelPreviewCal" style="margin:0 auto;"></div>
+      <button class="btn" id="permBtn" style="margin-top:20px;">센서 권한 요청 &amp; 시작</button>
+      <button class="btn ghost" style="margin-top:8px;" id="skipSensorBtn">센서 없이 진행 (터치 조작)</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTS (race start sequence) -->
+<div id="lightsOverlay">
+  <div class="lightRow" id="lightRow"></div>
+  <div id="lightsText">준비하세요</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-top-left">
+    <div class="lap-counter"><span id="lapCur">1</span><span class="of" id="lapOf">/1</span></div>
+    <div class="hud-chip"><span id="sessionLabel">퀄리파잉</span></div>
+  </div>
+  <div id="posBadge">P<span id="posVal">1</span>/<span id="posTotal">8</span></div>
+  <div class="hud-top-right">
+    <div class="hud-chip">랩타임<span class="val" id="lapTimeVal">0:00.00</span></div>
+    <div class="hud-chip">베스트<span class="val" id="bestLapVal">--:--.--</span></div>
+  </div>
+
+  <div id="speedo">
+    <div id="speedVal">0</div>
+    <div id="speedUnit">KM/H</div>
+    <div id="gearVal">N</div>
+  </div>
+
+  <div class="bars">
+    <div class="bar-row">
+      <div class="bar-label"><span>연료</span><span id="fuelPct">100%</span></div>
+      <div class="bar-track"><div class="bar-fill fuel-fill" id="fuelBar" style="width:100%"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"><span>타이어</span><span id="tirePct">100%</span></div>
+      <div class="bar-track"><div class="bar-fill tire-fill" id="tireBar" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <button class="camBtn" id="camToggleBtn">📷</button>
+  <button class="pauseBtn" id="pauseBtn">⏸</button>
+</div>
+
+<div id="touchControls">
+  <div class="pedal" id="brakeBtn">BRAKE</div>
+  <div class="pedal" id="throttleBtn">GAS</div>
+</div>
+
+<div id="toast"></div>
+
+<!-- RESULTS -->
+<div id="resultOverlay">
+  <div class="panel">
+    <div class="section-title" id="resultTitle">퀄리파잉 결과</div>
+    <table class="result-table" id="resultTable"></table>
+    <button class="btn" id="resultNextBtn">다음</button>
+  </div>
+</div>
+
+<script>
+  // ---------------------------------------------------------------------
+  // Landscape enforcement: try the Screen Orientation API (works in the
+  // Capacitor/Android WebView and some mobile browsers), and always show
+  // a "rotate your device" gate whenever the viewport is taller than it
+  // is wide, since the API isn't available/permitted everywhere (notably
+  // plain mobile Safari).
+  // ---------------------------------------------------------------------
+  function tryLockLandscape() {
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (e) { /* not supported — rely on the visual gate below */ }
+  }
+
+  function checkOrientation() {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    document.getElementById('rotateGate').classList.toggle('active', isPortrait);
+  }
+
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', () => {
+    tryLockLandscape();
+    setTimeout(checkOrientation, 200);
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    tryLockLandscape();
+    checkOrientation();
+  });
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js"
+  }
+}
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

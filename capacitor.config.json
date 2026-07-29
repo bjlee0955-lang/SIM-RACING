@@ -1,0 +1,11 @@
+{
+  "appId": "com.gt3circuit.app",
+  "appName": "GT3 Circuit",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
