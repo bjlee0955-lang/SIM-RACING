@@ -1,0 +1,18 @@
+{
+  "name": "mobile-simracing-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "description": "모바일 심레이싱 게임 프로토타입 (Three.js, GT3급 오리지널 차량 3종 + 오리지널 서킷 1개)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  },
+  "dependencies": {
+    "three": "^0.165.0"
+  }
+}
